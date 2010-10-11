@@ -1,0 +1,12 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+CFLAGS	Makefile	/^CFLAGS=-Wall -pedantic --std=c99 -lgnutls$/;"	m
+_XOPEN_SOURCE	main.c	14;"	d	file:
+check	main.c	/^int check( char * hostname, int port ) {$/;"	f	signature:( char * hostname, int port )
+die	main.c	25;"	d	file:
+main	main.c	/^int main(int argc, char **argv) {$/;"	f	signature:(int argc, char **argv)
+tcp_open	main.c	/^int tcp_open( char *hostname, int port ) {$/;"	f	signature:( char *hostname, int port )
