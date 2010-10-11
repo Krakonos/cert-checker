@@ -1,0 +1,20 @@
+Certificate validity checker
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Sample nagios configuration:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+define command {
+        command_name    check_cert
+        command_line    /usr/local/bin/cert-checker -H $HOSTADDRESS$ -s $ARG1$ -w $ARG2$ -c $ARG3$
+}
+
+define service {
+        hostgroup_name linux-servers
+        service_description HTTPS certificate validity checker
+        check_command check_cert!443!30!7
+        use generic-service
+        normal_check_interval 86400
+}
+
