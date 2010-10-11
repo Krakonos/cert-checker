@@ -140,13 +140,20 @@ int check( char * hostname, char *service ) {
 		gnutls_x509_crt_import( cert, &cert_list[0], GNUTLS_X509_FMT_DER );
 		expiration_time = gnutls_x509_crt_get_expiration_time( cert );
 		int expires_in = (expiration_time - today) / 86400;
+		struct tm * t = gmtime( &expiration_time );
 		if ((state == S_OK) && (expires_in <= warning_after)) {
 			state = S_WARNING;
-			sprintf(errmsg, "Certificate will expire in %i days.", expires_in);
+			sprintf(errmsg, "Warning - Will expire in %i days (%i-%02i-%02i).", expires_in, 
+				t->tm_year+1900, t->tm_mon+1, t->tm_mday );
 		}
 		if ((state <= S_WARNING) && (expires_in <= error_after)) {
 			state = S_ERROR;
-			sprintf(errmsg, "Certificate will expire in %i days.", expires_in);
+			sprintf(errmsg, "Critical - Will expire in %i days (%i-%02i-%02i).", expires_in,
+				t->tm_year+1900, t->tm_mon+1, t->tm_mday );
+		}
+		if (state == S_OK) {
+			sprintf(errmsg, "OK - Will expire in %i days (%i-%02i-%02i).", expires_in,
+				t->tm_year+1900, t->tm_mon+1, t->tm_mday );
 		}
 	}
 
