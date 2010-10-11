@@ -15,3 +15,6 @@ depend:
 
 clean:
 	rm -f cert-checker *.o
+
+install:
+	install -o root -g root cert-checker /usr/local/bin
