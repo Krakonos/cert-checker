@@ -15,6 +15,6 @@ define service {
         service_description HTTPS certificate validity checker
         check_command check_cert!443!30!7
         use generic-service
-        normal_check_interval 86400
+        normal_check_interval 1440
 }
 

@@ -150,8 +150,6 @@ int check( char * hostname, char *service ) {
 		}
 	}
 
-	printf("Got %i certs.", cert_list_size);
-
 	/* Clean up */
 	err = gnutls_bye( session, GNUTLS_SHUT_WR );
 	if (err < 0) gnutls_die(err);
