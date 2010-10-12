@@ -105,7 +105,7 @@ int check( char * hostname, char *service ) {
 
 	/* Connect to server */
 
-	int fd = tcp_open( hostname, service );
+	long fd = tcp_open( hostname, service );
 	
 	if (fd == -1) {
 		state= S_UNREACHABLE;
