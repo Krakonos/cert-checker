@@ -34,6 +34,7 @@
 
 int warning_after = 30;
 int error_after = 7;
+int verbose = 0;
 
 #define LOG_LEVEL 0
 
@@ -205,6 +206,8 @@ int main(int argc, char **argv) {
 			case 'h':
 				print_help();
 				exit(0);
+			case 'v':
+				verbose++;
 			default: break;
 		}
 	}
@@ -247,5 +250,12 @@ int main(int argc, char **argv) {
 }
 
 void print_help() {
-	printf("Help yourself.");
+	printf(
+		"Usage: cert-checker [options] -H hostname -p|s port|service\n"
+		"  Where options could be: \n"
+		"       -h      this help\n"
+		"       -w      warning level (in days, default 30)\n"
+		"       -c      critical level (in days, default 7)\n"
+		"       -v      verbosity level\n"	
+	);
 }
