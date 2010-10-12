@@ -1,6 +1,9 @@
 Certificate validity checker
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Dependencies
+------------
+	- gnutls (any reasonably recent version)
 
 Sample nagios configuration:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
