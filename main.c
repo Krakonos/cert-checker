@@ -35,6 +35,7 @@
 int warning_after = 30;
 int error_after = 7;
 int verbose = 0;
+int timeout = 9;
 
 #define LOG_LEVEL 0
 
@@ -177,7 +178,7 @@ void log_func( int level, char *msg ) {
  * This signal handler is wrong, but it's just a failsafe. 
  */
 void sig_handler(int k) {
-	fputs("Timeout.", stderr);	
+	fputs("Timeout.\n", stderr);	
 	exit(S_UNKNOWN);
 }
 
@@ -187,7 +188,7 @@ int main(int argc, char **argv) {
 
 	int opt;
 
-	while ((opt = getopt(argc, argv, "hvw:c:H:p:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "hvw:c:H:p:s:t:")) != -1) {
 		switch (opt) {
 			case 'w':
 				warning_after = atoi(optarg);
@@ -197,6 +198,10 @@ int main(int argc, char **argv) {
 				break;
 			case 'H':
 				hostname = strdup(optarg);
+				break;
+			case 't':
+				timeout = atoi( optarg );
+				if (timeout < 0) die("Timeout must be >= 0"); 
 				break;
 			case 'p':			
 			case 's':
@@ -233,12 +238,14 @@ int main(int argc, char **argv) {
 	/* Setup alarm */
 	/* TODO: doesn't work. */
 	signal(SIGALRM, sig_handler);
-	alarm(9*60);
+	alarm( timeout );
 
 	/* Do checking */
 	state = check(hostname, service);
-	if (state < 0)
-		printf("Internal error.");
+	if (state < 0) {
+		sprintf(errmsg, "Internal error %i.", state);
+		state = S_UNKNOWN;
+	}
 	
 	gnutls_global_deinit();
 
@@ -253,9 +260,10 @@ void print_help() {
 	printf(
 		"Usage: cert-checker [options] -H hostname -p|s port|service\n"
 		"  Where options could be: \n"
-		"       -h      this help\n"
-		"       -w      warning level (in days, default 30)\n"
-		"       -c      critical level (in days, default 7)\n"
-		"       -v      verbosity level\n"	
+		"       -h hostname   this help\n"
+		"       -w n          warning level (in days, default 30)\n"
+		"       -c n          critical level (in days, default 7)\n"
+		"       -v            verbosity level\n"	
+		"       -t n          timeout (in seconds, n=0 disables timeout\n"
 	);
 }
