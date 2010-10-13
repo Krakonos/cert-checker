@@ -36,10 +36,14 @@ int warning_after = 30;
 int error_after = 7;
 int verbose = 0;
 int timeout = 9;
+int use_starttls = 0;
+
+#define BUFFER_SIZE 1024
 
 #define LOG_LEVEL 0
 
 #define die(msg) { fprintf(stderr, "Error: " msg "\n" ); exit(3); }
+#define dief(msg, ...) { fprintf(stderr, "Error: " msg "\n", __VA_ARGS__ ); exit(3); }
 #define gnutls_die(code) { gnutls_perror(code); exit(3); }
 
 char errmsg[256];
@@ -82,6 +86,25 @@ int tcp_open( char *hostname, char *service ) {
 	return sfd;
 }
 
+/* Expects some data. This is just wrong and should be written correctly. */
+char *expect(int fd, char *str) {
+	char buffer[BUFFER_SIZE];
+	int len = strlen(str);
+	int bytes = read(fd, buffer, BUFFER_SIZE);
+	if (bytes < len) goto fail;
+	if (!strncmp(buffer,str,len)) {
+		while (bytes == BUFFER_SIZE)
+			bytes = read(fd, buffer, BUFFER_SIZE) > 0;
+		return NULL;
+	}
+
+	fail:;
+	char *ptr = strdup(buffer);
+	while (bytes == BUFFER_SIZE)
+		bytes = read(fd, buffer, BUFFER_SIZE) > 0;
+	return ptr;
+}
+
 int check( char * hostname, char *service ) {
 	int state = S_OK;
 	int err;
@@ -112,6 +135,20 @@ int check( char * hostname, char *service ) {
 		state= S_UNREACHABLE;
 		goto cleanup;
 	}
+
+
+	/* StartTLS? */
+
+	if (use_starttls) {
+		expect(fd, "");
+		char buffer[] = "STARTTLS\n";
+		write(fd, buffer, sizeof(buffer));
+		char *b;
+		if ((b = expect(fd, "220 "))) {
+			dief("STARTTLS declined: %s.", b);
+		}
+	}
+
 
 	/* Socket opened, establish tls connection */
 
@@ -188,7 +225,7 @@ int main(int argc, char **argv) {
 
 	int opt;
 
-	while ((opt = getopt(argc, argv, "hvw:c:H:p:s:t:")) != -1) {
+	while ((opt = getopt(argc, argv, "hvSw:c:H:p:s:t:")) != -1) {
 		switch (opt) {
 			case 'w':
 				warning_after = atoi(optarg);
@@ -213,6 +250,8 @@ int main(int argc, char **argv) {
 				exit(0);
 			case 'v':
 				verbose++;
+			case 'S':
+				use_starttls = 1;
 			default: break;
 		}
 	}
@@ -265,5 +304,6 @@ void print_help() {
 		"       -c n          critical level (in days, default 7)\n"
 		"       -v            verbosity level\n"	
 		"       -t n          timeout (in seconds, n=0 disables timeout\n"
+		"		-S            use SMTP/STARTLS\n"
 	);
 }
