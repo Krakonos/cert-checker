@@ -42,9 +42,9 @@ int use_starttls = 0;
 
 #define LOG_LEVEL 0
 
-#define die(msg) { fprintf(stderr, "Error: " msg "\n" ); exit(3); }
-#define dief(msg, ...) { fprintf(stderr, "Error: " msg "\n", __VA_ARGS__ ); exit(3); }
-#define gnutls_die(code) { gnutls_perror(code); exit(3); }
+#define die(msg) { fprintf(stderr, "Error: " msg "\n" ); exit(S_ERROR); }
+#define dief(msg, ...) { fprintf(stderr, "Error: " msg "\n", __VA_ARGS__ ); exit(S_ERROR); }
+#define gnutls_die(code) { gnutls_perror(code); exit(S_ERROR); }
 
 char errmsg[256];
 
@@ -216,11 +216,11 @@ void log_func( int level, char *msg ) {
  */
 void sig_handler(int k) {
 	fputs("Timeout.\n", stderr);	
-	exit(S_UNKNOWN);
+	exit(S_ERROR);
 }
 
 int main(int argc, char **argv) {
-	char *hostname;
+	char *hostname = NULL;
 	char *service = NULL;
 
 	int opt;
@@ -256,7 +256,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (argc <= 1) die("No address to try.");
+	if (!hostname) die("No address to try.");
+	if (!service) die("No service given.");
 
 	gnutls_global_set_log_function((gnutls_log_func) log_func);
 	gnutls_global_set_log_level(LOG_LEVEL);
@@ -266,7 +267,7 @@ int main(int argc, char **argv) {
 	int err;
 	if ((err = gnutls_global_init())) {
 		gnutls_perror(err);
-		exit(3);
+		exit(S_UNKNOWN);
 	};
 
 	sprintf(errmsg, "OK");
@@ -282,8 +283,18 @@ int main(int argc, char **argv) {
 	/* Do checking */
 	state = check(hostname, service);
 	if (state < 0) {
-		sprintf(errmsg, "Internal error %i.", state);
-		state = S_UNKNOWN;
+		switch (state) {
+			case S_UNREACHABLE:
+				state = S_ERROR;
+				sprintf(errmsg, "Connection refused.");
+			break;
+			case S_NO_X509:
+				state = S_UNKNOWN;
+				sprintf(errmsg, "No X509 certificate to check.");
+			default:
+				sprintf(errmsg, "Internal error %i.", state);
+				state = S_UNKNOWN;
+		}
 	}
 	
 	gnutls_global_deinit();
@@ -299,7 +310,9 @@ void print_help() {
 	printf(
 		"Usage: cert-checker [options] -H hostname -p|s port|service\n"
 		"  Where options could be: \n"
-		"       -h hostname   this help\n"
+		"       -h            this help\n"
+		"       -H hostname   target hostname\n"
+		"       -s|p service  port or service (as in /etc/services)\n"
 		"       -w n          warning level (in days, default 30)\n"
 		"       -c n          critical level (in days, default 7)\n"
 		"       -v            verbosity level\n"	
