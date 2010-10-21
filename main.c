@@ -25,12 +25,8 @@
 #include <time.h>
 #include <signal.h>
 
-#define S_UNREACHABLE -1
-#define S_NO_X509 -2
-#define S_OK 0
-#define S_WARNING 1
-#define S_ERROR 2
-#define S_UNKNOWN 3
+#include "smtp.h"
+#include "main.h"
 
 int warning_after = 30;
 int error_after = 7;
@@ -38,13 +34,12 @@ int verbose = 0;
 int timeout = 9;
 int use_starttls = 0;
 
-#define BUFFER_SIZE 1024
+enum {
+	P_SMTP = 1,
+	P_IMAP = 2
+};
 
 #define LOG_LEVEL 0
-
-#define die(msg) { fprintf(stderr, "Error: " msg "\n" ); exit(S_ERROR); }
-#define dief(msg, ...) { fprintf(stderr, "Error: " msg "\n", __VA_ARGS__ ); exit(S_ERROR); }
-#define gnutls_die(code) { gnutls_perror(code); exit(S_ERROR); }
 
 char errmsg[256];
 
@@ -86,25 +81,6 @@ int tcp_open( char *hostname, char *service ) {
 	return sfd;
 }
 
-/* Expects some data. This is just wrong and should be written correctly. */
-char *expect(int fd, char *str) {
-	char buffer[BUFFER_SIZE];
-	int len = strlen(str);
-	int bytes = read(fd, buffer, BUFFER_SIZE);
-	if (bytes < len) goto fail;
-	if (!strncmp(buffer,str,len)) {
-		while (bytes == BUFFER_SIZE)
-			bytes = read(fd, buffer, BUFFER_SIZE) > 0;
-		return NULL;
-	}
-
-	fail:;
-	char *ptr = strdup(buffer);
-	while (bytes == BUFFER_SIZE)
-		bytes = read(fd, buffer, BUFFER_SIZE) > 0;
-	return ptr;
-}
-
 int check( char * hostname, char *service ) {
 	int state = S_OK;
 	int err;
@@ -136,19 +112,21 @@ int check( char * hostname, char *service ) {
 		goto cleanup;
 	}
 
-
 	/* StartTLS? */
-
-	if (use_starttls) {
-		expect(fd, "");
-		char buffer[] = "STARTTLS\n";
-		write(fd, buffer, sizeof(buffer));
-		char *b;
-		if ((b = expect(fd, "220 "))) {
-			dief("STARTTLS declined: %s.", b);
-		}
+	int starttls_ok = 1;
+	switch (use_starttls) {
+		case P_SMTP:
+			starttls_ok = smtp_starttls(fd);
+			break;
+		case P_IMAP:
+			die("STARTTLS for IMAP not implemented yet.");
+			break;
+		default:
+			die("Unknown STARTTLS protocol requested.");
 	}
 
+	if (starttls_ok)
+		die("STARTTLS failed silently. This shouldn't happen.");
 
 	/* Socket opened, establish tls connection */
 
@@ -200,7 +178,7 @@ int check( char * hostname, char *service ) {
 	err = gnutls_bye( session, GNUTLS_SHUT_WR );
 	if (err < 0) gnutls_die(err);
 	close( fd );
-	cleanup:
+cleanup:
 	gnutls_deinit( session );
 	gnutls_certificate_free_credentials( xcred );
 
@@ -225,7 +203,7 @@ int main(int argc, char **argv) {
 
 	int opt;
 
-	while ((opt = getopt(argc, argv, "hvSw:c:H:p:s:t:")) != -1) {
+	while ((opt = getopt(argc, argv, "hvSIw:c:H:p:s:t:")) != -1) {
 		switch (opt) {
 			case 'w':
 				warning_after = atoi(optarg);
@@ -250,8 +228,13 @@ int main(int argc, char **argv) {
 				exit(0);
 			case 'v':
 				verbose++;
+				break;
 			case 'S':
-				use_starttls = 1;
+				use_starttls = P_SMTP;
+				break;
+			case 'I':
+				use_starttls = P_IMAP;
+				break;
 			default: break;
 		}
 	}
@@ -317,6 +300,7 @@ void print_help() {
 		"       -c n          critical level (in days, default 7)\n"
 		"       -v            verbosity level\n"	
 		"       -t n          timeout (in seconds, n=0 disables timeout\n"
-		"		-S            use SMTP/STARTLS\n"
+		"       -S            use SMTP/STARTLS\n"
+		"       -I            use IMAP/STARTLS\n"
 	);
 }

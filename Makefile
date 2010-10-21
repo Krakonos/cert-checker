@@ -1,9 +1,8 @@
 CFLAGS=-Wall -pedantic --std=c99 -lgnutls
 
-
 all:	cert-checker
 
-cert-checker: main.o
+cert-checker: main.o smtp.o
 	gcc $(CFLAGS) -o $@ $^
 
 depend:
