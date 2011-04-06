@@ -16,5 +16,6 @@
 int smtp_ehlo(int fd);
 char* smtp_expect(int fd, char *str);
 int smtp_starttls(int fd);
+int smtp_quit(gnutls_session_t session);
 
 #endif

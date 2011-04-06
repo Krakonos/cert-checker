@@ -121,6 +121,10 @@ int check( char * hostname, char *service ) {
 		case P_IMAP:
 			die("STARTTLS for IMAP not implemented yet.");
 			break;
+		case 0:
+			/* Don't use STARTTLS */
+			starttls_ok = 0;
+			break;
 		default:
 			die("Unknown STARTTLS protocol requested.");
 	}
@@ -151,7 +155,7 @@ int check( char * hostname, char *service ) {
 	cert_list = gnutls_certificate_get_peers( session, &cert_list_size );
 
 	today = time(NULL);
-
+	
 	for (int i = 0; i < cert_list_size; i++) {
 		gnutls_x509_crt_init( &cert );
 		gnutls_x509_crt_import( cert, &cert_list[0], GNUTLS_X509_FMT_DER );
@@ -175,9 +179,21 @@ int check( char * hostname, char *service ) {
 	}
 
 	/* Clean up */
-	err = gnutls_bye( session, GNUTLS_SHUT_WR );
-	if (err < 0) gnutls_die(err);
-	close( fd );
+	
+	/* This could use some other parameter. */
+	switch (use_starttls) {
+		case P_SMTP:
+			smtp_quit(session);
+			break;
+		case P_IMAP:
+			die("IMAP not implemented yet.");
+			break;
+		default:;
+	}
+
+//	err = gnutls_bye( session, GNUTLS_SHUT_WR );
+//	if (err < 0) gnutls_die(err);
+//	close( fd );
 cleanup:
 	gnutls_deinit( session );
 	gnutls_certificate_free_credentials( xcred );
